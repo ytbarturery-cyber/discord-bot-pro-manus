@@ -35,13 +35,6 @@ const saveDB = () => fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
 
 // 3. Chargeur de Modules (Architecture Professionnelle)
 const loadModules = () => {
-  const folders = ['commands', 'events', 'modules'];
-  folders.forEach(f => {
-    const p = path.join(__dirname, f);
-    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-  });
-
-  // Chargement récursif des commandes
   const cmdPath = path.join(__dirname, 'commands');
   const categories = fs.readdirSync(cmdPath);
   for (const cat of categories) {
@@ -49,18 +42,37 @@ const loadModules = () => {
     if (!fs.lstatSync(catPath).isDirectory()) continue;
     const files = fs.readdirSync(catPath).filter(f => f.endsWith('.js'));
     for (const file of files) {
-      const cmd = require(path.join(catPath, file));
-      if (cmd.data) client.commands.set(cmd.data.name, cmd);
+      const commandModule = require(path.join(catPath, file));
+      const commands = Array.isArray(commandModule) ? commandModule : [commandModule];
+      for (const cmd of commands) {
+        if (cmd.data) client.commands.set(cmd.data.name, cmd);
+      }
     }
   }
+  
+  // Chargement des événements
+  const eventPath = path.join(__dirname, 'events');
+  const eventCats = fs.readdirSync(eventPath);
+  for (const cat of eventCats) {
+    const catPath = path.join(eventPath, cat);
+    if (!fs.lstatSync(catPath).isDirectory()) continue;
+    const files = fs.readdirSync(catPath).filter(f => f.endsWith('.js'));
+    for (const file of files) {
+      const event = require(path.join(catPath, file));
+      if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args, client, db, saveDB));
+      } else {
+        client.on(event.name, (...args) => event.execute(...args, client, db, saveDB));
+      }
+    }
+  }
+  
   console.log(`📦 [SYSTEM] ${client.commands.size} commandes chargées.`);
 };
 
 // 4. Événement Ready
 client.once('ready', async () => {
   console.log(`✅ [DISCORD] Connecté : ${client.user.tag}`);
-  
-  // Déploiement automatique des commandes
   try {
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     const body = Array.from(client.commands.values()).map(c => c.data.toJSON());
