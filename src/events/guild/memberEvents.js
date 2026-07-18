@@ -17,6 +17,13 @@ module.exports = [
           .setTimestamp();
         await channel.send({ embeds: [embed] });
       }
+
+      // Autoroles
+      if (config.autoRoles && Array.isArray(config.autoRoles)) {
+        for (const roleId of config.autoRoles) {
+          await member.roles.add(roleId).catch(() => {});
+        }
+      }
     }
   },
   {
