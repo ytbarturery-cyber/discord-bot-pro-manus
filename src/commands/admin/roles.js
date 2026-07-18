@@ -9,8 +9,11 @@ module.exports = [
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction, client, db, saveDB) {
       const rolesStr = interaction.options.getString('roles');
-      const rolesArray = rolesStr.split(' ');
+      // Extraire les IDs des mentions <@&ID>
+      const rolesArray = rolesStr.match(/\d+/g);
       
+      if (!rolesArray) return interaction.reply({ content: '❌ Veuillez mentionner des rôles valides.', ephemeral: true });
+
       const guildId = interaction.guild.id;
       if (!db.guilds[guildId]) db.guilds[guildId] = {};
       db.guilds[guildId].autoRoles = rolesArray;
@@ -29,8 +32,11 @@ module.exports = [
     async execute(interaction) {
       const rolesStr = interaction.options.getString('roles');
       const messageText = interaction.options.getString('message');
-      const rolesArray = rolesStr.split(' ').slice(0, 5); // Limite à 5 boutons par ligne
+      // Extraire les IDs des mentions <@&ID>
+      const rolesArray = rolesStr.match(/\d+/g)?.slice(0, 5);
       
+      if (!rolesArray) return interaction.reply({ content: '❌ Veuillez mentionner des rôles valides.', ephemeral: true });
+
       const embed = new EmbedBuilder()
         .setTitle('Sélection de rôles')
         .setDescription(messageText)
