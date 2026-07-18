@@ -30,9 +30,20 @@ module.exports = [
       .setDescription('Récupérer votre récompense quotidienne'),
     async execute(interaction, client, db, saveDB) {
       const key = `${interaction.user.id}-${interaction.guild.id}`;
-      if (!db.users[key]) db.users[key] = { xp: 0, level: 1, balance: 100 };
+      if (!db.users[key]) db.users[key] = { xp: 0, level: 1, balance: 100, lastDaily: 0 };
+      
+      const now = Date.now();
+      const cooldown = 24 * 60 * 60 * 1000; // 24 heures
+      
+      if (now - db.users[key].lastDaily < cooldown) {
+        const remaining = cooldown - (now - db.users[key].lastDaily);
+        const hours = Math.floor(remaining / (60 * 60 * 1000));
+        const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+        return interaction.reply({ content: `❌ Vous avez déjà récupéré votre récompense ! Revenez dans **${hours}h ${minutes}m**.`, ephemeral: true });
+      }
       
       db.users[key].balance += 50;
+      db.users[key].lastDaily = now;
       saveDB();
       
       await interaction.reply(`🎁 Vous avez reçu **50 💰** ! Nouveau solde : ${db.users[key].balance} 💰`);
